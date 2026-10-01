@@ -1,0 +1,21 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# JavaScript
+node_modules/
+dist/
+
+# Python
+__pycache__/
+.venv/
+venv/
+
+# .NET
+bin/
+obj/
+
+# Operating system files
+.DS_Store
+Thumbs.db
