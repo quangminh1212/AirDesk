@@ -4,6 +4,7 @@ import type {
   AgentRunRequest,
   Booking,
   BookingCreateRequest,
+  BookingDetail,
   Conversation,
   ConversationDetail,
   DocumentAnswer,
@@ -17,13 +18,24 @@ import type {
   Page,
   PollSummary,
   ProviderList,
+  Role,
   QATurn,
   QAOverview,
+  Shipment,
+  ShipmentCreate,
+  ShipmentEvent,
+  ShipmentCancel,
+  ShipmentStats,
+  ShipmentStatusUpdate,
+  ShipmentSummary,
   Task,
   TaskCreate,
   TaskStats,
   TaskUpdate,
+  TrackingEventCreate,
   User,
+  UserCreate,
+  UserUpdate,
   VolumeReport,
   AgentPerformancePoint,
 } from "@/types";
@@ -94,6 +106,13 @@ export const flightApi = {
     const { data } = await api.get<FlightOffer>(`/flights/offers/${provider}/${offerId}`);
     return data;
   },
+  /** NDC OfferPrice: re-price a shopped offer before booking. */
+  async price(provider: string, offerId: string): Promise<FlightOffer> {
+    const { data } = await api.post<FlightOffer>(
+      `/flights/offers/${provider}/${offerId}/price`,
+    );
+    return data;
+  },
 };
 
 export const bookingApi = {
@@ -105,8 +124,8 @@ export const bookingApi = {
     const { data } = await api.get<Page<Booking> | Booking[]>("/bookings", { params });
     return data;
   },
-  async get(id: string): Promise<Booking> {
-    const { data } = await api.get<Booking>(`/bookings/${id}`);
+  async get(id: string): Promise<BookingDetail> {
+    const { data } = await api.get<BookingDetail>(`/bookings/${id}`);
     return data;
   },
   async cancel(id: string): Promise<Booking> {
@@ -265,6 +284,82 @@ export const inboxApi = {
   },
   async poll(): Promise<PollSummary> {
     const { data } = await api.post<PollSummary>("/inbox/poll");
+    return data;
+  },
+};
+
+export const shipmentApi = {
+  async list(params?: {
+    page?: number;
+    page_size?: number;
+    status?: string;
+    mode?: string;
+    carrier?: string;
+    tracking_number?: string;
+    customer_phone?: string;
+    overdue?: boolean;
+    needs_attention?: boolean;
+  }): Promise<Page<ShipmentSummary>> {
+    const { data } = await api.get<Page<ShipmentSummary>>("/shipments", { params });
+    return data;
+  },
+  async stats(): Promise<ShipmentStats> {
+    const { data } = await api.get<ShipmentStats>("/shipments/stats");
+    return data;
+  },
+  async getByTracking(trackingNumber: string): Promise<Shipment> {
+    const { data } = await api.get<Shipment>(
+      `/shipments/track/${encodeURIComponent(trackingNumber)}`,
+    );
+    return data;
+  },
+  async get(id: string): Promise<Shipment> {
+    const { data } = await api.get<Shipment>(`/shipments/${id}`);
+    return data;
+  },
+  async getEvents(id: string): Promise<ShipmentEvent[]> {
+    const { data } = await api.get<ShipmentEvent[]>(`/shipments/${id}/events`);
+    return data;
+  },
+  async create(req: ShipmentCreate): Promise<Shipment> {
+    const { data } = await api.post<Shipment>("/shipments", req);
+    return data;
+  },
+  async updateStatus(id: string, payload: ShipmentStatusUpdate): Promise<Shipment> {
+    const { data } = await api.post<Shipment>(`/shipments/${id}/status`, payload);
+    return data;
+  },
+  async addEvent(id: string, payload: TrackingEventCreate): Promise<Shipment> {
+    const { data } = await api.post<Shipment>(`/shipments/${id}/events`, payload);
+    return data;
+  },
+  async cancel(id: string, payload: ShipmentCancel = {}): Promise<Shipment> {
+    const { data } = await api.post<Shipment>(`/shipments/${id}/cancel`, payload);
+    return data;
+  },
+};
+
+// --- users (admin) ----------------------------------------------------------
+
+export const usersApi = {
+  /** List all users. Admin only. */
+  async list(): Promise<User[]> {
+    const { data } = await api.get<User[]>("/auth/users");
+    return data;
+  },
+  /** Create a user. Admin only. */
+  async create(req: UserCreate): Promise<User> {
+    const { data } = await api.post<User>("/auth/users", req);
+    return data;
+  },
+  /** Update a user (role, active flag, name, optional password). Admin only. */
+  async update(id: string, payload: UserUpdate): Promise<User> {
+    const { data } = await api.patch<User>(`/auth/users/${id}`, payload);
+    return data;
+  },
+  /** Enumerate the roles the backend accepts. */
+  async roles(): Promise<Role[]> {
+    const { data } = await api.get<Role[]>("/auth/roles");
     return data;
   },
 };

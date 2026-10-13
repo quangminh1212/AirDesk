@@ -6,6 +6,7 @@ import clsx from "clsx";
 
 import { Button } from "@/components/ui";
 import { useAuth } from "@/store/auth";
+import { useTheme } from "@/hooks/useTheme";
 import type { Role } from "@/types";
 
 interface NavItem {
@@ -24,11 +25,16 @@ const NAV: NavItem[] = [
   { to: "/tasks", label: "Công việc", icon: "◫" },
   { to: "/documents", label: "Tài liệu", icon: "⎘" },
   { to: "/inbox", label: "Hộp thư", icon: "✉" },
+  { to: "/flights", label: "Vé máy bay", icon: "🛫" },
   { to: "/bookings", label: "Đặt chỗ", icon: "✈" },
+  { to: "/shipments", label: "Vận chuyển", icon: "⛟", minimumRole: "OPERATOR" },
+  { to: "/reports", label: "Báo cáo", icon: "▥", minimumRole: "OPERATOR" },
+  { to: "/users", label: "Người dùng", icon: "👤", minimumRole: "ADMIN" },
 ];
 
 export default function AppLayout() {
   const { user, logout, hasRole } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -97,8 +103,17 @@ export default function AppLayout() {
             ☰
           </button>
           <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              aria-label={theme === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối"}
+              title={theme === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối"}
+              onClick={toggleTheme}
+              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              {theme === "dark" ? "☀" : "🌙"}
+            </button>
             <div className="text-right">
-              <p className="text-sm font-medium text-slate-700">{user?.full_name || user?.email}</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{user?.full_name || user?.email}</p>
               <p className="text-xs text-slate-400">{user?.role}</p>
             </div>
             <Button variant="ghost" onClick={handleLogout}>

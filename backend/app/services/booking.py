@@ -295,6 +295,8 @@ class BookingService:
             payment_status=PaymentStatus.PENDING,
             created_by_id=created_by_id,
             conversation_id=conversation_id,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
             offer_snapshot=offer.raw,
             expires_at=datetime.now(UTC) + DEFAULT_HOLD_TTL,
             # Initialise the collections explicitly. A relationship that is

@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import asyncio
 import io
-import json
 import os
 import sys
 import zipfile
@@ -102,16 +101,17 @@ async def main() -> int:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://e2e") as c:
         # 1. login
-        r = await c.post("/api/v1/auth/login", json={"email": "e2e@airdesk.vn", "password": "secret123"})
+        creds = {"email": "e2e@airdesk.vn", "password": "secret123"}
+        r = await c.post("/api/v1/auth/login", json=creds)
         record("login", r.status_code == 200, f"HTTP {r.status_code}")
         if r.status_code != 200:
             return 1
-        H = {"Authorization": f"Bearer {r.json()['access_token']}"}
+        headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
 
         # 2. real agent turn (live Claude, real tool call)
         r = await c.post(
             "/api/v1/agent/chat",
-            headers=H,
+            headers=headers,
             json={
                 "message": "Tôi muốn bay từ SGN đi Hà Nội ngày 2026-12-01 cho 1 người lớn.",
                 "channel": "web",
@@ -124,20 +124,23 @@ async def main() -> int:
         if ok:
             tools = [t.get("tool_name") for t in reply.get("tool_calls", [])]
             record("agent used a tool", "search_flights" in tools, f"tools={tools}")
-            record("agent returned offers", len(reply.get("offers", [])) > 0, f"n={len(reply.get('offers', []))}")
-            record("agent replied in Vietnamese", bool(reply.get("reply", "").strip()), reply.get("reply", "")[:70])
+            n_offers = len(reply.get("offers", []))
+            record("agent returned offers", n_offers > 0, f"n={n_offers}")
+            said = reply.get("reply", "")
+            record("agent replied in Vietnamese", bool(said.strip()), said[:70])
             qa = reply.get("qa") or {}
-            record("QA report attached", "verdict" in qa, f"verdict={qa.get('verdict')} score={qa.get('score')}")
+            verdict, score = qa.get("verdict"), qa.get("score")
+            record("QA report attached", "verdict" in qa, f"verdict={verdict} score={score}")
             conv_id = reply.get("conversation_id")
 
         # 3. QA turn listing
-        r = await c.get("/api/v1/qa/turns", headers=H, params={"days": 7})
+        r = await c.get("/api/v1/qa/turns", headers=headers, params={"days": 7})
         ok = r.status_code == 200
         body = r.json() if ok else {}
         record("QA turns listing", ok and body.get("total", 0) >= 1, f"total={body.get('total')}")
 
         # 4. QA overview
-        r = await c.get("/api/v1/qa/overview", headers=H, params={"days": 7})
+        r = await c.get("/api/v1/qa/overview", headers=headers, params={"days": 7})
         body = r.json() if r.status_code == 200 else {}
         record(
             "QA overview",
@@ -146,25 +149,29 @@ async def main() -> int:
         )
 
         # 5. reports
-        r = await c.get("/api/v1/reports/overview", headers=H)
+        r = await c.get("/api/v1/reports/overview", headers=headers)
         record("reports overview", r.status_code == 200, f"HTTP {r.status_code}")
-        r = await c.get("/api/v1/reports/volume", headers=H, params={"days": 30})
+        r = await c.get("/api/v1/reports/volume", headers=headers, params={"days": 30})
         pts = (r.json() or {}).get("points", []) if r.status_code == 200 else []
-        record("reports volume contiguous", r.status_code == 200 and len(pts) == 30, f"points={len(pts)}")
+        total_pts = len(pts)
+        contiguous = r.status_code == 200 and total_pts == 30
+        record("reports volume contiguous", contiguous, f"points={total_pts}")
 
         # 6. tasks lifecycle
         r = await c.post(
             "/api/v1/tasks",
-            headers=H,
+            headers=headers,
             json={"title": "Gọi lại khách xác nhận hoàn vé", "priority": 1, "task_type": "refund"},
         )
         ok = r.status_code in (200, 201)
         task = r.json() if ok else {}
         record("task create", ok, f"HTTP {r.status_code}")
         if ok:
-            r = await c.patch(f"/api/v1/tasks/{task['id']}", headers=H, json={"status": "done"})
+            patch_url = f"/api/v1/tasks/{task['id']}"
+            r = await c.patch(patch_url, headers=headers, json={"status": "done"})
             done = r.json() if r.status_code == 200 else {}
-            record("task complete sets completed_at", bool(done.get("completed_at")), f"HTTP {r.status_code}")
+            completed = bool(done.get("completed_at"))
+            record("task complete sets completed_at", completed, str(r.status_code))
 
         # 7. document upload with REAL LLM structured extraction
         docx = make_docx(
@@ -173,7 +180,7 @@ async def main() -> int:
         )
         r = await c.post(
             "/api/v1/documents",
-            headers=H,
+            headers=headers,
             files={
                 "file": (
                     "e-ticket.docx",
@@ -185,7 +192,9 @@ async def main() -> int:
         )
         ok = r.status_code in (200, 201)
         doc = r.json() if ok else {}
-        record("document upload + extraction", ok, f"HTTP {r.status_code} status={doc.get('status')}")
+        doc_status = doc.get("status")
+        detail = f"HTTP {r.status_code} status={doc_status}"
+        record("document upload + extraction", ok, detail)
         if ok:
             record(
                 "document classified",
@@ -194,9 +203,10 @@ async def main() -> int:
             )
 
         # 8. conversation persistence
-        r = await c.get(f"/api/v1/agent/conversations/{conv_id}", headers=H)
+        r = await c.get(f"/api/v1/agent/conversations/{conv_id}", headers=headers)
         msgs = (r.json() or {}).get("messages", []) if r.status_code == 200 else []
-        record("conversation persisted", r.status_code == 200 and len(msgs) >= 2, f"messages={len(msgs)}")
+        n_msgs = len(msgs)
+        record("conversation persisted", r.status_code == 200 and n_msgs >= 2, f"messages={n_msgs}")
 
     await engine.dispose()
 

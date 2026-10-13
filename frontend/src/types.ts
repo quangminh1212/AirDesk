@@ -28,6 +28,23 @@ export interface User {
   last_login_at?: string | null;
 }
 
+/** Body for `POST /auth/users`. Password must contain a letter AND a digit. */
+export interface UserCreate {
+  email: string;
+  full_name: string;
+  role: Role;
+  password: string;
+}
+
+/** Body for `PATCH /auth/users/{id}`. All fields optional. */
+export interface UserUpdate {
+  full_name?: string;
+  role?: Role;
+  is_active?: boolean;
+  /** Optional password reset; server enforces the same letter+digit rule. */
+  password?: string;
+}
+
 export interface Segment {
   origin: string;
   destination: string;
@@ -66,6 +83,12 @@ export interface FlightOffer {
   refundable?: boolean | null;
   baggage_allowance?: string | null;
   expires_at?: string | null;
+  /** "shopped" (reference only) or "priced" (bookable). */
+  kind?: string;
+  price_guarantee_until?: string | null;
+  is_bookable?: boolean;
+  markup_amount?: number;
+  airline_amount?: number;
 }
 
 export interface FlightSearchRequest {
@@ -119,6 +142,52 @@ export interface Booking {
   contact_phone?: string | null;
   created_at: string;
   passengers?: unknown[];
+}
+
+export interface PassengerRead {
+  id: string;
+  passenger_type: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string | null;
+  nationality?: string | null;
+  document_type?: string | null;
+  document_number?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+export interface OrderEventRead {
+  id: string;
+  event_type: string;
+  occurred_at: string;
+  actor: string;
+  from_status?: string | null;
+  to_status?: string | null;
+  payload?: Record<string, unknown>;
+}
+
+export interface TicketRead {
+  id: string;
+  ticket_number: string;
+  segment_index: number;
+  flight_number: string;
+  status: string;
+  pnr?: string | null;
+  fare_amount: number;
+  tax_amount: number;
+  issued_at?: string | null;
+  voided_at?: string | null;
+  refunded_at?: string | null;
+  refund_amount: number;
+  notes?: string | null;
+}
+
+export interface BookingDetail extends Booking {
+  passengers: PassengerRead[];
+  events: OrderEventRead[];
+  tickets: TicketRead[];
+  notes?: string | null;
 }
 
 // --- agent ---------------------------------------------------------------
@@ -310,6 +379,140 @@ export interface DocumentRecord {
 
 export interface DocumentAnswer {
   answer: string;
+}
+
+// --- shipments (logistics) ----------------------------------------------
+
+export type ShipmentStatus =
+  | "DRAFT"
+  | "BOOKED"
+  | "PICKED_UP"
+  | "IN_TRANSIT"
+  | "CUSTOMS"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "DELAYED"
+  | "EXCEPTION"
+  | "CANCELLED"
+  | "RETURNED";
+
+export type ShipmentMode = "AIR" | "SEA" | "ROAD" | "RAIL" | "COURIER";
+
+export type ShipmentPriority = 1 | 2 | 3;
+
+export interface ShipmentEvent {
+  id: string;
+  event_type: string;
+  occurred_at: string;
+  actor: string;
+  location?: string | null;
+  from_status?: string | null;
+  to_status?: string | null;
+  note?: string | null;
+  payload?: Record<string, unknown> | null;
+}
+
+export interface ShipmentSummary {
+  id: string;
+  reference: string;
+  status: ShipmentStatus;
+  mode: ShipmentMode;
+  priority: ShipmentPriority;
+  carrier?: string | null;
+  tracking_number?: string | null;
+  origin: string;
+  destination: string;
+  customer_name?: string | null;
+  pieces: number;
+  weight_kg?: number | null;
+  eta_at?: string | null;
+  delivered_at?: string | null;
+  created_at: string;
+  is_overdue?: boolean;
+}
+
+export interface Shipment {
+  id: string;
+  reference: string;
+  status: ShipmentStatus;
+  mode: ShipmentMode;
+  priority: ShipmentPriority;
+  carrier?: string | null;
+  tracking_number?: string | null;
+  waybill_number?: string | null;
+  origin: string;
+  destination: string;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  description?: string | null;
+  pieces: number;
+  weight_kg?: number | null;
+  declared_value: number;
+  cod_amount: number;
+  currency: string;
+  requires_customs: boolean;
+  is_dangerous_goods: boolean;
+  eta_at?: string | null;
+  picked_up_at?: string | null;
+  delivered_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  meta?: Record<string, unknown> | null;
+  is_overdue?: boolean;
+  allowed_next?: ShipmentStatus[];
+  events?: ShipmentEvent[];
+}
+
+export interface ShipmentStats {
+  total?: number;
+  by_status?: Array<{ status: string; count: number }>;
+  by_mode?: Array<{ mode: string; count: number }>;
+  in_transit?: number;
+  needs_attention?: number;
+  overdue?: number;
+  delivered_this_week?: number;
+  total_declared_value_vnd?: number;
+}
+
+export interface ShipmentCreate {
+  origin: string;
+  destination: string;
+  mode?: ShipmentMode;
+  priority?: ShipmentPriority;
+  carrier?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  description?: string | null;
+  pieces?: number;
+  weight_kg?: number | null;
+  declared_value?: number;
+  cod_amount?: number;
+  currency?: string;
+  requires_customs?: boolean;
+  is_dangerous_goods?: boolean;
+  eta_at?: string | null;
+  conversation_id?: string | null;
+  booking_id?: string | null;
+  notes?: string | null;
+  idempotency_key?: string | null;
+}
+
+export interface ShipmentStatusUpdate {
+  status: ShipmentStatus;
+}
+
+export interface TrackingEventCreate {
+  event_type: string;
+  location?: string | null;
+  note?: string | null;
+  occurred_at?: string | null;
+  payload?: Record<string, unknown> | null;
+}
+
+export interface ShipmentCancel {
+  reason?: string | null;
 }
 
 // --- inbox ---------------------------------------------------------------

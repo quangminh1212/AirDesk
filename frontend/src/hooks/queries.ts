@@ -7,8 +7,19 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { agentApi, documentApi, inboxApi, qaApi, reportApi, taskApi } from "@/api";
-import type { AgentRunRequest, TaskCreate, TaskUpdate } from "@/types";
+import { agentApi, documentApi, inboxApi, qaApi, reportApi, shipmentApi, taskApi, usersApi } from "@/api";
+import type {
+  AgentRunRequest,
+  ShipmentCancel,
+  ShipmentCreate,
+  ShipmentStatus,
+  ShipmentStatusUpdate,
+  TaskCreate,
+  TaskUpdate,
+  TrackingEventCreate,
+  UserCreate,
+  UserUpdate,
+} from "@/types";
 
 function pageParam(page: number, pageSize = 20) {
   return { page, page_size: pageSize };
@@ -204,6 +215,152 @@ export function usePollInbox() {
     mutationFn: () => inboxApi.poll(),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["inbox"] });
+    },
+  });
+}
+
+// --- shipments (logistics) ----------------------------------------------
+
+export function useShipments(
+  params: {
+    page?: number;
+    status?: string;
+    mode?: string;
+    carrier?: string;
+    tracking_number?: string;
+    customer_phone?: string;
+    overdue?: boolean;
+    needs_attention?: boolean;
+  } = {},
+) {
+  return useQuery({
+    queryKey: [
+      "shipments",
+      params.page ?? 1,
+      params.status ?? "all",
+      params.mode ?? "all",
+      params.carrier ?? "all",
+      params.tracking_number ?? "",
+      params.customer_phone ?? "",
+      params.overdue ?? false,
+      params.needs_attention ?? false,
+    ],
+    queryFn: () =>
+      shipmentApi.list({
+        ...pageParam(params.page ?? 1, 20),
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.mode ? { mode: params.mode } : {}),
+        ...(params.carrier ? { carrier: params.carrier } : {}),
+        ...(params.tracking_number ? { tracking_number: params.tracking_number } : {}),
+        ...(params.customer_phone ? { customer_phone: params.customer_phone } : {}),
+        ...(params.overdue ? { overdue: true } : {}),
+        ...(params.needs_attention ? { needs_attention: true } : {}),
+      }),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useShipmentStats() {
+  return useQuery({
+    queryKey: ["shipment-stats"],
+    queryFn: () => shipmentApi.stats(),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useShipment(id: string | null) {
+  return useQuery({
+    queryKey: ["shipment", id],
+    queryFn: () => shipmentApi.get(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateShipment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: ShipmentCreate) => shipmentApi.create(req),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["shipments"] });
+      void qc.invalidateQueries({ queryKey: ["shipment-stats"] });
+      void qc.invalidateQueries({ queryKey: ["report-overview"] });
+    },
+  });
+}
+
+export function useUpdateShipmentStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; status: ShipmentStatus }) =>
+      shipmentApi.updateStatus(args.id, { status: args.status } as ShipmentStatusUpdate),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: ["shipments"] });
+      void qc.invalidateQueries({ queryKey: ["shipment", data.id] });
+      void qc.invalidateQueries({ queryKey: ["shipment-stats"] });
+    },
+  });
+}
+
+export function useAddShipmentEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; payload: TrackingEventCreate }) =>
+      shipmentApi.addEvent(args.id, args.payload),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: ["shipment", data.id] });
+      void qc.invalidateQueries({ queryKey: ["shipments"] });
+      void qc.invalidateQueries({ queryKey: ["shipment-stats"] });
+    },
+  });
+}
+
+export function useCancelShipment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; reason?: string }) =>
+      shipmentApi.cancel(args.id, { reason: args.reason } as ShipmentCancel),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: ["shipments"] });
+      void qc.invalidateQueries({ queryKey: ["shipment", data.id] });
+      void qc.invalidateQueries({ queryKey: ["shipment-stats"] });
+    },
+  });
+}
+
+// --- users (admin) ----------------------------------------------------------
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ["users"],
+    queryFn: () => usersApi.list(),
+  });
+}
+
+export function useRoles() {
+  return useQuery({
+    queryKey: ["roles"],
+    queryFn: () => usersApi.roles(),
+    staleTime: Infinity,
+  });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: UserCreate) => usersApi.create(req),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; payload: UserUpdate }) =>
+      usersApi.update(args.id, args.payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["users"] });
     },
   });
 }

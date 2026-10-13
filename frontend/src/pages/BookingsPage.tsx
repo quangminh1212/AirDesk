@@ -1,22 +1,26 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   Badge,
+  Button,
   Card,
+  Disclosure,
   EmptyState,
   ErrorState,
   JsonBlock,
   Loading,
   Modal,
   Pagination,
+  Spinner,
   Table,
   toneForStatus,
   type Column,
 } from "@/components/ui";
 import { bookingApi } from "@/api";
-import { useQuery } from "@tanstack/react-query";
 import { formatDateTime, formatVnd } from "@/lib/format";
-import type { Booking, Page } from "@/types";
+import type { Booking, BookingDetail, Page } from "@/types";
 
 /** Bookings may come back as a `Page[Booking]` envelope or a bare array. */
 function toPage(data: Page<Booking> | Booking[] | undefined): {
@@ -30,6 +34,87 @@ function toPage(data: Page<Booking> | Booking[] | undefined): {
   return { items: data.items, page: data.page, pages: data.pages, total: data.total };
 }
 
+function BookingDetailBody({
+  base,
+  detail,
+  loading,
+}: {
+  base: Booking;
+  detail: BookingDetail | undefined;
+  loading: boolean;
+}) {
+  const b = detail ?? base;
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Badge tone={toneForStatus(b.status)}>{b.status}</Badge>
+        <Badge tone="neutral">{b.provider}</Badge>
+      </div>
+      <dl className="grid grid-cols-2 gap-2 text-sm">
+        <dt className="text-slate-500">Tổng tiền</dt>
+        <dd className="font-medium">{formatVnd(b.total_amount, b.currency)}</dd>
+        <dt className="text-slate-500">Email</dt>
+        <dd>{b.contact_email}</dd>
+        <dt className="text-slate-500">Điện thoại</dt>
+        <dd>{b.contact_phone ?? "—"}</dd>
+        <dt className="text-slate-500">PNR</dt>
+        <dd>{b.pnr ?? "—"}</dd>
+      </dl>
+
+      {loading && (
+        <p className="flex items-center gap-2 text-xs text-slate-400">
+          <Spinner /> Đang tải chi tiết…
+        </p>
+      )}
+
+      {detail && detail.passengers.length > 0 && (
+        <Disclosure summary={`Hành khách (${detail.passengers.length})`} defaultOpen>
+          <ul className="space-y-1 text-sm text-slate-600">
+            {detail.passengers.map((p) => (
+              <li key={p.id}>
+                {p.last_name} {p.first_name} · {p.passenger_type}
+                {p.document_number ? ` · ${p.document_number}` : ""}
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
+      )}
+
+      {detail && detail.tickets.length > 0 && (
+        <Disclosure summary={`Vé (${detail.tickets.length})`} defaultOpen>
+          <ul className="space-y-1 text-sm text-slate-600">
+            {detail.tickets.map((t) => (
+              <li key={t.id} className="flex items-center gap-2">
+                <Badge tone={toneForStatus(t.status)}>{t.status}</Badge>
+                <span className="font-medium">{t.ticket_number || "chưa cấp số"}</span>
+                <span className="text-xs text-slate-400">
+                  {t.flight_number} · {formatVnd(t.fare_amount + t.tax_amount, b.currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
+      )}
+
+      {detail && detail.events.length > 0 && (
+        <Disclosure summary={`Lịch sử xử lý (${detail.events.length})`}>
+          <ul className="space-y-1 text-xs text-slate-500">
+            {detail.events.map((e) => (
+              <li key={e.id}>
+                <span className="font-medium text-slate-700">{e.event_type}</span> · {e.actor} ·{" "}
+                {formatDateTime(e.occurred_at)}
+                {e.to_status ? ` → ${e.to_status}` : ""}
+              </li>
+            ))}
+          </ul>
+        </Disclosure>
+      )}
+
+      <JsonBlock value={b} />
+    </div>
+  );
+}
+
 export default function BookingsPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Booking | null>(null);
@@ -37,6 +122,12 @@ export default function BookingsPage() {
   const query = useQuery({
     queryKey: ["bookings", page],
     queryFn: () => bookingApi.list({ page, page_size: 20 }),
+  });
+
+  const detailQuery = useQuery({
+    queryKey: ["booking", selected?.id],
+    queryFn: () => bookingApi.get(selected!.id),
+    enabled: Boolean(selected),
   });
 
   if (query.isLoading) return <Loading />;
@@ -82,9 +173,14 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-800">Đặt chỗ</h1>
-        <p className="text-sm text-slate-500">Tất cả đặt chỗ do agent hoặc nhân viên tạo.</p>
+      <header className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-800">Đặt chỗ</h1>
+          <p className="text-sm text-slate-500">Tất cả đặt chỗ do agent hoặc nhân viên tạo.</p>
+        </div>
+        <Link to="/flights">
+          <Button variant="primary">Đặt vé mới</Button>
+        </Link>
       </header>
 
       <Card>
@@ -103,25 +199,17 @@ export default function BookingsPage() {
         />
       </Card>
 
-      <Modal open={Boolean(selected)} onClose={() => setSelected(null)} title={`Đặt chỗ ${selected?.reference ?? ""}`}>
+      <Modal
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        title={`Đặt chỗ ${selected?.reference ?? ""}`}
+      >
         {selected && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Badge tone={toneForStatus(selected.status)}>{selected.status}</Badge>
-              <Badge tone="neutral">{selected.provider}</Badge>
-            </div>
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-              <dt className="text-slate-500">Tổng tiền</dt>
-              <dd className="font-medium">{formatVnd(selected.total_amount, selected.currency)}</dd>
-              <dt className="text-slate-500">Email</dt>
-              <dd>{selected.contact_email}</dd>
-              <dt className="text-slate-500">Điện thoại</dt>
-              <dd>{selected.contact_phone ?? "—"}</dd>
-              <dt className="text-slate-500">PNR</dt>
-              <dd>{selected.pnr ?? "—"}</dd>
-            </dl>
-            <JsonBlock value={selected} />
-          </div>
+          <BookingDetailBody
+            base={selected}
+            detail={detailQuery.data}
+            loading={detailQuery.isLoading}
+          />
         )}
       </Modal>
     </div>

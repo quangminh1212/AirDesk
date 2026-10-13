@@ -4,6 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/layout/AppLayout";
 import BookingsPage from "@/pages/BookingsPage";
 import ChatPage from "@/pages/ChatPage";
+import FlightsPage from "@/pages/FlightsPage";
 import ConversationDetailPage from "@/pages/ConversationDetailPage";
 import ConversationsPage from "@/pages/ConversationsPage";
 import DashboardPage from "@/pages/DashboardPage";
@@ -13,7 +14,10 @@ import InboxPage from "@/pages/InboxPage";
 import LoginPage from "@/pages/LoginPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import QAReviewPage from "@/pages/QAReviewPage";
+import ReportsPage from "@/pages/ReportsPage";
+import ShipmentsPage from "@/pages/ShipmentsPage";
 import TasksPage from "@/pages/TasksPage";
+import UsersPage from "@/pages/UsersPage";
 
 export default function App() {
   return (
@@ -51,6 +55,31 @@ export default function App() {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/bookings" element={<BookingsPage />} />
+        <Route path="/flights" element={<FlightsPage />} />
+        <Route
+          path="/shipments"
+          element={
+            <ProtectedRoute minimumRole="OPERATOR">
+              <ShipmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute minimumRole="OPERATOR">
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute minimumRole="ADMIN">
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

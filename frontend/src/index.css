@@ -4,6 +4,22 @@
 
 :root {
   color-scheme: light;
+  /* XLab design tokens — light */
+  --surface: 255 255 255;
+  --surface-foreground: 30 41 59; /* slate-800 */
+  --surface-muted: 241 245 249; /* slate-100 */
+  --surface-border: 226 232 240; /* slate-200 */
+  --surface-elevated: 248 250 252; /* slate-50 */
+}
+
+html.dark {
+  color-scheme: dark;
+  /* XLab design tokens — dark (lighter slate for contrast) */
+  --surface: 30 41 59; /* slate-800 #1e293b */
+  --surface-foreground: 226 232 240; /* slate-200 */
+  --surface-muted: 51 65 85; /* slate-700 #334155 */
+  --surface-border: 71 85 105; /* slate-600 #475569 */
+  --surface-elevated: 71 85 105; /* slate-600 #475569 */
 }
 
 html,
@@ -13,7 +29,8 @@ body,
 }
 
 body {
-  @apply bg-slate-100 text-slate-800 antialiased;
+  @apply bg-slate-100 text-slate-800 antialiased dark:bg-slate-900 dark:text-slate-200;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .btn {
@@ -23,13 +40,13 @@ body {
   @apply btn bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50;
 }
 .btn-ghost {
-  @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+  @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
 }
 .input {
-  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-brand-900;
 }
 .card {
-  @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm;
+  @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800;
 }
 .badge {
   @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;

@@ -121,6 +121,10 @@ class Booking(UUIDMixin, TimestampMixin, Base):
         String(80), unique=True, nullable=True, index=True
     )
 
+    #: Booking-level contact (agency reaches the customer about this order).
+    contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
     # Provenance & audit: which agent/user created it, raw provider snapshot
     created_by_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True

@@ -43,6 +43,8 @@ class BookingRead(BaseModel):
     base_amount: int
     taxes_amount: int
     markup_amount: int = 0
+    contact_email: str | None = None
+    contact_phone: str | None = None
     payment_status: PaymentStatus
     created_at: datetime
     confirmed_at: datetime | None = None

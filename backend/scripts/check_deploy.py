@@ -78,7 +78,8 @@ if (FRONTEND / "Dockerfile").exists():
     for needed in ("package.json", "nginx.conf", "index.html"):
         check(f"frontend/{needed} exists for Docker build", (FRONTEND / needed).is_file())
 
-    check("frontend .dockerignore excludes node_modules", "node_modules" in (FRONTEND / ".dockerignore").read_text(encoding="utf-8"))
+    dockerignore = (FRONTEND / ".dockerignore").read_text(encoding="utf-8")
+    check("frontend .dockerignore excludes node_modules", "node_modules" in dockerignore)
     check("frontend dist not required in build context", True, "built inside image")
 
 # --- 4. backend packaging --------------------------------------------------
