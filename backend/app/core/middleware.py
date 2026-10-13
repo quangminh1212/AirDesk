@@ -4,14 +4,23 @@ from __future__ import annotations
 
 import time
 import uuid
+from typing import TYPE_CHECKING
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
 from app.core.logging import get_logger, new_request_id, request_id_ctx
 
+if TYPE_CHECKING:
+    from prometheus_client import Counter, Histogram
+
 logger = get_logger("access")
+
+# Metrics are best-effort: a minimal install may not ship prometheus_client, so
+# both handles are typed as optional and stay None when collection is disabled.
+_REQUESTS: Counter | None
+_LATENCY: Histogram | None
 
 try:  # pragma: no cover - metrics are optional in minimal installs
     from prometheus_client import Counter, Histogram
@@ -34,7 +43,7 @@ except Exception:  # noqa: BLE001
 class RequestContextMiddleware(BaseHTTPMiddleware):
     """Attach a request id, emit access logs and record metrics."""
 
-    async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         rid = request.headers.get("x-request-id") or new_request_id()
         token = request_id_ctx.set(rid)
         start = time.perf_counter()

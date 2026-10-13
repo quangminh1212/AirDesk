@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.core.logging import get_logger
+from app.models.booking import CabinClass as ModelCabinClass
 from app.models.shipment import ShipmentMode, ShipmentStatus
 from app.providers.base_types import CabinClass, FlightSearchQuery
 from app.providers.registry import available_provider_names, get_provider, search_flights
@@ -404,7 +405,9 @@ class ToolRuntime:
             contact_phone=contact_phone,
             created_by_id=self._actor_id,
             conversation_id=self._conversation_id,
-            cabin=CabinClass(cabin),
+            # `cabin` arrives as a plain string from the model; the service
+            # persists the model-layer enum, not the provider-layer one.
+            cabin=ModelCabinClass(cabin),
             actor_type="agent",
         )
         return {

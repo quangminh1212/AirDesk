@@ -174,12 +174,17 @@ class AmadeusProvider(HttpFlightProvider):
         )
         order = (data or {}).get("data", {})
         tickets = self._extract_tickets(order)
+        # The order echoes the priced offer back; reuse the same total the
+        # search path reads (grandTotal, falling back to total) rather than
+        # guessing at a bare field name.
+        order_price = (order.get("flightOffers") or [{}])[0].get("price", {}) or {}
+        order_total = order_price.get("grandTotal") or order_price.get("total") or "0"
         return OrderResult(
             provider=self.name,
             order_id=order.get("id", ""),
             booking_reference=(order.get("associatedRecords") or [{}])[0].get("reference", ""),
             status=order.get("queuingOfficeId", "confirmed") and "confirmed",
-            total_amount=self._to_minor(order.get("flightOffers", [{}])[0]),
+            total_amount=self._money_to_minor(order_total),
             currency=offer.currency,
             tickets=tickets,
             raw=order,
@@ -231,10 +236,6 @@ class AmadeusProvider(HttpFlightProvider):
         price = item.get("price", {})
         currency = price.get("currency", "VND")
         itineraries = item.get("itineraries", [])
-        carrier_map = {
-            c.get("carrierCode"): c.get("carrierCode")
-            for c in (item.get("dictionaries", {}).get("carriers") or {}).items()
-        }
         dict_carriers = item.get("dictionaries", {}).get("carriers", {}) or {}
 
         segments: list[Segment] = []
@@ -256,8 +257,6 @@ class AmadeusProvider(HttpFlightProvider):
                         fare_basis=seg.get("fareBasis"),
                     )
                 )
-        _ = carrier_map
-
         grand = price.get("grandTotal") or price.get("total") or "0"
         base = price.get("base") or "0"
         return FlightOffer(

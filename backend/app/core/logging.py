@@ -9,7 +9,9 @@ from __future__ import annotations
 import logging
 import sys
 import uuid
+from collections.abc import MutableMapping
 from contextvars import ContextVar
+from typing import Any
 
 import structlog
 
@@ -25,7 +27,9 @@ def new_request_id() -> str:
     return rid
 
 
-def _add_request_id(_logger: object, _method: str, event_dict: dict) -> dict:
+def _add_request_id(
+    _logger: object, _method: str, event_dict: MutableMapping[str, Any]
+) -> MutableMapping[str, Any]:
     event_dict["request_id"] = request_id_ctx.get()
     return event_dict
 
@@ -41,7 +45,7 @@ def configure_logging() -> None:
         level=level,
     )
 
-    shared_processors = [
+    shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         _add_request_id,
         structlog.processors.add_log_level,

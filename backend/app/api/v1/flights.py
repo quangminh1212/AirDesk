@@ -6,7 +6,7 @@ from fastapi import APIRouter
 
 from app.api.deps import CurrentUserDep
 from app.core.errors import NotFoundError, ValidationError
-from app.providers.base_types import FlightSearchQuery
+from app.providers.base_types import FlightOffer, FlightSearchQuery
 from app.providers.codec import offer_from_dict, offer_to_dict
 from app.providers.registry import available_provider_names, get_provider, search_flights
 from app.schemas.flight import (
@@ -19,7 +19,7 @@ from app.services.offer_cache import cache_offer, get_cached_offer
 router = APIRouter(prefix="/flights", tags=["flights"])
 
 
-def to_offer_schema(offer) -> FlightOfferSchema:  # type: ignore[no-untyped-def]
+def to_offer_schema(offer: FlightOffer) -> FlightOfferSchema:
     return FlightOfferSchema(
         offer_id=offer.offer_id,
         provider=offer.provider,

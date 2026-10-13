@@ -6,12 +6,13 @@ prometheus metrics and the versioned API router into a single ASGI app.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -25,6 +26,20 @@ from app.core.middleware import RequestContextMiddleware
 
 logger = get_logger(__name__)
 
+
+async def _rate_limit_handler(request: Request, exc: Exception) -> Response:
+    """Adapt slowapi's handler to Starlette's wider exception signature.
+
+    Starlette types exception handlers as accepting any ``Exception``, while
+    slowapi's takes ``RateLimitExceeded``. The narrower type is the true one -
+    this handler is only ever registered for that class - so re-raise anything
+    else rather than silently swallowing an unrelated error.
+    """
+    if not isinstance(exc, RateLimitExceeded):
+        raise exc
+    return _rate_limit_exceeded_handler(request, exc)
+
+
 DESCRIPTION = """
 **AirDesk** is an AI-agent platform for travel agencies and logistics operators.
 
@@ -37,7 +52,7 @@ DESCRIPTION = """
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging()
     logger.info(
@@ -80,7 +95,7 @@ def create_app() -> FastAPI:
     # --- rate limiting ----------------------------------------------------
     limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit_default])
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
     # --- error handling ---------------------------------------------------
     register_exception_handlers(app)

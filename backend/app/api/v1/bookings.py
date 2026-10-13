@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, Query, status
 
 from app.api.deps import CurrentUserDep, DbSession, Pagination
 from app.core.errors import NotFoundError
-from app.models.booking import Booking, BookingStatus
+from app.models.booking import Booking, BookingStatus, CabinClass
 from app.providers.codec import offer_from_dict
 from app.schemas.booking import (
     BookingDetail,
@@ -62,7 +62,10 @@ async def create_booking(
         contact_email=payload.contact_email,
         contact_phone=payload.contact_phone,
         created_by_id=user.id,
-        cabin=payload.cabin,
+        # `payload.cabin` is the provider-layer enum; the service persists the
+        # model-layer one. They share values today, but converting explicitly
+        # keeps the layers decoupled instead of relying on that coincidence.
+        cabin=CabinClass(payload.cabin.value),
         actor_type="user",
         idempotency_key=idempotency_key,
     )

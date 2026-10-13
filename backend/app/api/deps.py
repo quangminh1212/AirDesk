@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, Query, Request
@@ -45,7 +45,7 @@ async def get_current_user(
     )
 
 
-def require_role(minimum: UserRole) -> Callable[[CurrentUser], CurrentUser]:
+def require_role(minimum: UserRole) -> Callable[[CurrentUser], Awaitable[CurrentUser]]:
     """Dependency factory enforcing a minimum role level."""
 
     async def _dependency(user: Annotated[CurrentUser, Depends(get_current_user)]) -> CurrentUser:

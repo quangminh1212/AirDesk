@@ -76,9 +76,26 @@ class LLMGateway(Protocol):
 
     Structural (not nominal) so tests can inject a stub without importing
     LiteLLM, and so the service is not coupled to :class:`LiteLLMGateway`.
+
+    The signature mirrors :meth:`app.core.llm.LiteLLMGateway.complete`
+    exactly. Declaring ``**kwargs: Any`` here instead would make the protocol
+    demand a method that accepts *any* keyword — which the real gateway does
+    not, since it takes explicit keyword-only parameters — and mypy would
+    reject every real gateway as a structurally incompatible type.
     """
 
-    async def complete(self, **kwargs: Any) -> LLMResult: ...
+    async def complete(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+        tool_choice: str | dict | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        response_format: dict | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> LLMResult: ...
 
 
 @dataclass

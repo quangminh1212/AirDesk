@@ -110,7 +110,9 @@ def html_to_text(html: str) -> str:
 def _decode_part(part: Message) -> str:
     """Decode a MIME part body to text, tolerating unknown charsets."""
     payload = part.get_payload(decode=True)
-    if payload is None:
+    # The stubs type this as `bytes | None`, but for a multipart container it
+    # can hand back a nested `Message`; only text parts are decodable here.
+    if not isinstance(payload, bytes):
         raw = part.get_payload()
         return raw if isinstance(raw, str) else ""
     charset = part.get_content_charset() or "utf-8"
@@ -118,6 +120,18 @@ def _decode_part(part: Message) -> str:
         return payload.decode(charset, errors="replace")
     except LookupError:
         return payload.decode("utf-8", errors="replace")
+
+
+def _decode_attachment(part: Message) -> bytes:
+    """Return a MIME part's decoded bytes, never ``None``.
+
+    ``get_payload(decode=True)`` is typed ``bytes | None`` and a container part
+    does report ``None``, so normalise that to empty bytes; the caller then
+    slices a real ``bytes`` object. (Only text parts reach here in practice --
+    ``_is_attachment`` requires a filename, which containers do not carry.)
+    """
+    payload = part.get_payload(decode=True)
+    return payload if isinstance(payload, bytes) else b""
 
 
 def _is_attachment(part: Message) -> bool:
@@ -173,7 +187,7 @@ def parse_message(raw: bytes) -> ParsedEmail:
         content_type = part.get_content_type()
         if _is_attachment(part):
             filename = decode_mime_header(part.get_filename()) or "unnamed"
-            payload = part.get_payload(decode=True) or b""
+            payload = _decode_attachment(part)
             attachments.append(
                 Attachment(
                     filename=filename,

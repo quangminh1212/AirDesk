@@ -31,7 +31,7 @@ It is built to be run, demoed, and reviewed — not just read.
 ## Verification status (measured, not claimed)
 
 ```
-backend:   188 tests passed, 0 failed, 0 errors, 0 skipped   (~80s)
+backend:   203 tests passed, 0 failed, 0 errors, 0 skipped   (~80s)
            ruff check app tests -> All checks passed!
            OpenAPI: 42 paths across 12 routers
 frontend:  tsc --noEmit   -> clean
@@ -223,7 +223,7 @@ FastAPI dependencies — never only in the UI.
 
 ```powershell
 cd backend
-.\.venv\Scripts\python.exe -m pytest -q          # 188 tests
+.\.venv\Scripts\python.exe -m pytest -q          # 203 tests
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe scripts\e2e_check.py  # live LLM, needs network
 

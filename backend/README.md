@@ -21,7 +21,7 @@ app/
   services/      documents, email_ingest, booking, offer_cache, audit
 alembic/         migrations
 scripts/         seed.py, e2e_check.py
-tests/           188 tests, fully hermetic (no network, no Postgres)
+tests/           203 tests, fully hermetic (no network, no Postgres)
 ```
 
 ## Running
@@ -41,7 +41,7 @@ Docs at <http://localhost:8000/docs>.
 ## Testing
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q            # 188 tests, offline
+.\.venv\Scripts\python.exe -m pytest -q            # 203 tests, offline
 .\.venv\Scripts\python.exe -m ruff check app tests  # lint
 .\.venv\Scripts\python.exe scripts\e2e_check.py     # live LLM, needs network
 ```

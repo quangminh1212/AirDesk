@@ -65,7 +65,9 @@ async def search_flights(
 
     merged: list[FlightOffer] = []
     for provider, result in zip(providers, results, strict=True):
-        if isinstance(result, Exception):
+        # `return_exceptions=True` can surface BaseException (e.g. a cancelled
+        # search), so guard on BaseException rather than Exception.
+        if isinstance(result, BaseException):
             logger.warning("provider_search_failed", provider=provider.name, error=str(result))
             continue
         merged.extend(result)
