@@ -1,4 +1,4 @@
-﻿/** Small, dependency-free primitives used across the app. */
+/** Small, dependency-free primitives used across the app. */
 
 import clsx from "clsx";
 import type { ReactNode } from "react";
@@ -109,9 +109,9 @@ export function toneForPriority(priority: number | null | undefined): Tone {
 
 export function priorityLabel(priority: number | null | undefined): string {
   if (priority === 1) return "Cao";
-  if (priority === 2) return "Trung bÃ¬nh";
-  if (priority === 3) return "Tháº¥p";
-  return "â€”";
+  if (priority === 2) return "Trung bình";
+  if (priority === 3) return "Thấp";
+  return "—";
 }
 
 // --- Button --------------------------------------------------------------
@@ -143,7 +143,7 @@ export function Spinner({ className }: { className?: string }) {
   return (
     <span
       role="status"
-      aria-label="Äang táº£i"
+      aria-label="Đang tải"
       className={clsx(
         "inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600",
         className,
@@ -152,7 +152,7 @@ export function Spinner({ className }: { className?: string }) {
   );
 }
 
-export function Loading({ label = "Äang táº£iâ€¦" }: { label?: string }) {
+export function Loading({ label = "Đang tải…" }: { label?: string }) {
   return (
     <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500">
       <Spinner />
@@ -185,7 +185,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
       <p className="text-sm font-medium text-rose-600">{message}</p>
       {onRetry && (
         <Button variant="ghost" onClick={onRetry}>
-          Thá»­ láº¡i
+          Thử lại
         </Button>
       )}
     </div>
@@ -244,7 +244,7 @@ export function Table<T>({
   empty?: ReactNode;
 }) {
   if (rows.length === 0) {
-    return <>{empty ?? <EmptyState title="KhÃ´ng cÃ³ dá»¯ liá»‡u" />}</>;
+    return <>{empty ?? <EmptyState title="Không có dữ liệu" />}</>;
   }
   return (
     <div className="overflow-x-auto">
@@ -302,18 +302,18 @@ export function Pagination({
 }) {
   if (pages <= 1) {
     return total !== undefined ? (
-      <p className="pt-3 text-xs text-slate-400">{total} báº£n ghi</p>
+      <p className="pt-3 text-xs text-slate-400">{total} bản ghi</p>
     ) : null;
   }
   return (
     <div className="flex items-center justify-between gap-3 pt-3">
       <p className="text-xs text-slate-400">
         Trang {page}/{pages}
-        {total !== undefined ? ` Â· ${total} báº£n ghi` : ""}
+        {total !== undefined ? ` · ${total} bản ghi` : ""}
       </p>
       <div className="flex gap-2">
         <Button variant="ghost" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-          TrÆ°á»›c
+          Trước
         </Button>
         <Button variant="ghost" disabled={page >= pages} onClick={() => onChange(page + 1)}>
           Sau
@@ -382,7 +382,7 @@ export function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={typeof title === "string" ? title : "Há»™p thoáº¡i"}
+      aria-label={typeof title === "string" ? title : "Hộp thoại"}
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onClick={onClose}
       onKeyDown={(e) => {
@@ -397,11 +397,11 @@ export function Modal({
           <h2 className="text-base font-semibold text-slate-800">{title}</h2>
           <button
             type="button"
-            aria-label="ÄÃ³ng"
+            aria-label="Đóng"
             className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             onClick={onClose}
           >
-            âœ•
+            ✕
           </button>
         </div>
         {children}

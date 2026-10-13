@@ -52,13 +52,13 @@ export default function DocumentsPage() {
       const res = await ask.mutateAsync({ id: selected.id, question: question.trim() });
       setAnswer(res.answer);
     } catch (err) {
-      setAnswer(`Lá»—i: ${errorMessage(err)}`);
+      setAnswer(`Lỗi: ${errorMessage(err)}`);
     }
   }
 
   if (query.isLoading) return <Loading />;
   if (query.isError) {
-    return <ErrorState message="KhÃ´ng táº£i Ä‘Æ°á»£c tÃ i liá»‡u." onRetry={() => void query.refetch()} />;
+    return <ErrorState message="Không tải được tài liệu." onRetry={() => void query.refetch()} />;
   }
 
   const rows = query.data?.items ?? [];
@@ -66,35 +66,35 @@ export default function DocumentsPage() {
   const columns: Column<DocumentRecord>[] = [
     {
       key: "file",
-      header: "Tá»‡p",
+      header: "Tệp",
       render: (d) => (
         <div>
           <p className="font-medium text-slate-700">{d.filename}</p>
           <p className="text-xs text-slate-400">
-            {formatBytes(d.size_bytes)} Â· <code>{d.sha256.slice(0, 10)}â€¦</code>
+            {formatBytes(d.size_bytes)} · <code>{d.sha256.slice(0, 10)}…</code>
           </p>
         </div>
       ),
     },
-    { key: "type", header: "Loáº¡i", render: (d) => <Badge tone="info">{d.doc_type}</Badge> },
+    { key: "type", header: "Loại", render: (d) => <Badge tone="info">{d.doc_type}</Badge> },
     {
       key: "status",
-      header: "Tráº¡ng thÃ¡i",
+      header: "Trạng thái",
       render: (d) => (
         <div className="space-y-1">
           <Badge tone={toneForStatus(d.status)}>{d.status}</Badge>
-          {d.needs_ocr && <Badge tone="warning">Cáº§n OCR</Badge>}
+          {d.needs_ocr && <Badge tone="warning">Cần OCR</Badge>}
         </div>
       ),
     },
     {
       key: "confidence",
-      header: "Äá»™ tin cáº­y",
+      header: "Độ tin cậy",
       render: (d) => <span className="text-xs text-slate-500">{formatPercent(d.confidence)}</span>,
     },
     {
       key: "created",
-      header: "Táº£i lÃªn",
+      header: "Tải lên",
       render: (d) => (
         <span className="text-xs text-slate-500">{formatDateTime(d.created_at)}</span>
       ),
@@ -105,13 +105,13 @@ export default function DocumentsPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">TÃ i liá»‡u</h1>
+          <h1 className="text-xl font-semibold text-slate-800">Tài liệu</h1>
           <p className="text-sm text-slate-500">
-            Táº£i vÃ©, hoÃ¡ Ä‘Æ¡n, há»™ chiáº¿uâ€¦ Ä‘á»ƒ tá»± Ä‘á»™ng trÃ­ch xuáº¥t dá»¯ liá»‡u vÃ  há»i Ä‘Ã¡p.
+            Tải vé, hoá đơn, hộ chiếu… để tự động trích xuất dữ liệu và hỏi đáp.
           </p>
         </div>
         <select
-          aria-label="Lá»c theo tráº¡ng thÃ¡i"
+          aria-label="Lọc theo trạng thái"
           className="input w-44"
           value={status}
           onChange={(e) => {
@@ -119,11 +119,11 @@ export default function DocumentsPage() {
             setPage(1);
           }}
         >
-          <option value="">Má»i tráº¡ng thÃ¡i</option>
-          <option value="uploaded">ÄÃ£ táº£i lÃªn</option>
-          <option value="extracting">Äang trÃ­ch xuáº¥t</option>
-          <option value="extracted">ÄÃ£ trÃ­ch xuáº¥t</option>
-          <option value="failed">Lá»—i</option>
+          <option value="">Mọi trạng thái</option>
+          <option value="uploaded">Đã tải lên</option>
+          <option value="extracting">Đang trích xuất</option>
+          <option value="extracted">Đã trích xuất</option>
+          <option value="failed">Lỗi</option>
         </select>
       </header>
 
@@ -144,10 +144,10 @@ export default function DocumentsPage() {
           }`}
         >
           <p className="text-sm font-medium text-slate-600">
-            KÃ©o tháº£ tá»‡p vÃ o Ä‘Ã¢y, hoáº·c chá»n tá»‡p
+            Kéo thả tệp vào đây, hoặc chọn tệp
           </p>
           <p className="text-xs text-slate-400">
-            Há»— trá»£ PDF, DOCX, TXT, CSV, JSON â€” tá»‘i Ä‘a 10 MB
+            Hỗ trợ PDF, DOCX, TXT, CSV, JSON — tối đa 10 MB
           </p>
           <input
             ref={fileRef}
@@ -156,7 +156,7 @@ export default function DocumentsPage() {
             onChange={(e) => void handleFiles(e.target.files)}
           />
           <Button variant="ghost" onClick={() => fileRef.current?.click()} disabled={upload.isPending}>
-            {upload.isPending ? "Äang táº£i lÃªnâ€¦" : "Chá»n tá»‡p"}
+            {upload.isPending ? "Đang tải lên…" : "Chọn tệp"}
           </Button>
           {uploadError && (
             <p role="alert" className="text-xs text-rose-600">
@@ -166,7 +166,7 @@ export default function DocumentsPage() {
         </div>
       </Card>
 
-      <Card title={`Danh sÃ¡ch tÃ i liá»‡u`}>
+      <Card title={`Danh sách tài liệu`}>
         <Table
           columns={columns}
           rows={rows}
@@ -176,7 +176,7 @@ export default function DocumentsPage() {
             setAnswer(null);
             setQuestion("");
           }}
-          empty={<EmptyState title="ChÆ°a cÃ³ tÃ i liá»‡u nÃ o" hint="Táº£i lÃªn tá»‡p Ä‘áº§u tiÃªn á»Ÿ trÃªn." />}
+          empty={<EmptyState title="Chưa có tài liệu nào" hint="Tải lên tệp đầu tiên ở trên." />}
         />
         <Pagination
           page={query.data?.page ?? 1}
@@ -189,7 +189,7 @@ export default function DocumentsPage() {
       <Modal
         open={Boolean(selected)}
         onClose={() => setSelected(null)}
-        title={selected?.filename ?? "TÃ i liá»‡u"}
+        title={selected?.filename ?? "Tài liệu"}
       >
         {selected && (
           <div className="space-y-4">
@@ -197,7 +197,7 @@ export default function DocumentsPage() {
               <Badge tone={toneForStatus(selected.status)}>{selected.status}</Badge>
               <Badge tone="info">{selected.doc_type}</Badge>
               <Badge tone="neutral">{formatBytes(selected.size_bytes)}</Badge>
-              <Badge tone="neutral">Tin cáº­y {formatPercent(selected.confidence)}</Badge>
+              <Badge tone="neutral">Tin cậy {formatPercent(selected.confidence)}</Badge>
             </div>
 
             {selected.error && (
@@ -208,19 +208,19 @@ export default function DocumentsPage() {
 
             {selected.needs_ocr && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Tá»‡p khÃ´ng cÃ³ lá»›p vÄƒn báº£n â€” cáº§n OCR thá»§ cÃ´ng.
+                Tệp không có lớp văn bản — cần OCR thủ công.
               </p>
             )}
 
             {selected.extracted && (
               <div>
-                <h3 className="mb-1 text-xs font-medium text-slate-500">Dá»¯ liá»‡u trÃ­ch xuáº¥t</h3>
+                <h3 className="mb-1 text-xs font-medium text-slate-500">Dữ liệu trích xuất</h3>
                 <JsonBlock value={selected.extracted} />
               </div>
             )}
 
             <div>
-              <h3 className="mb-1 text-xs font-medium text-slate-500">Há»i vá» tÃ i liá»‡u</h3>
+              <h3 className="mb-1 text-xs font-medium text-slate-500">Hỏi về tài liệu</h3>
               <div className="flex gap-2">
                 <input
                   className="input"
@@ -229,11 +229,11 @@ export default function DocumentsPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void submitQuestion();
                   }}
-                  placeholder="Sá»‘ hiá»‡u vÃ© trÃªn tÃ i liá»‡u nÃ y lÃ  gÃ¬?"
-                  aria-label="CÃ¢u há»i vá» tÃ i liá»‡u"
+                  placeholder="Số hiệu vé trên tài liệu này là gì?"
+                  aria-label="Câu hỏi về tài liệu"
                 />
                 <Button onClick={() => void submitQuestion()} disabled={ask.isPending}>
-                  {ask.isPending ? "â€¦" : "Há»i"}
+                  {ask.isPending ? "…" : "Hỏi"}
                 </Button>
               </div>
               {answer && (
@@ -245,8 +245,8 @@ export default function DocumentsPage() {
 
             {selected.text_content && (
               <details className="rounded-lg border border-slate-200">
-                <summary className="cursor-pointer-pointer px-3 py-2 text-xs font-medium text-slate-600">
-                  VÄƒn báº£n trÃ­ch xuáº¥t ({selected.text_content.length} kÃ½ tá»±)
+                <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-slate-600">
+                  Văn bản trích xuất ({selected.text_content.length} ký tự)
                 </summary>
                 <pre className="max-h-60 overflow-auto border-t border-slate-200 p-3 text-xs text-slate-600">
                   {selected.text_content.slice(0, 20000)}

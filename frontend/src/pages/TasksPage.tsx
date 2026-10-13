@@ -20,10 +20,10 @@ import { useCreateTask, useTasks, useUpdateTask } from "@/hooks/queries";
 import type { Task, TaskStatus } from "@/types";
 
 const COLUMNS: { status: TaskStatus; label: string }[] = [
-  { status: "todo", label: "Cáº§n lÃ m" },
-  { status: "in_progress", label: "Äang lÃ m" },
-  { status: "blocked", label: "Äang chá»" },
-  { status: "done", label: "HoÃ n thÃ nh" },
+  { status: "todo", label: "Cần làm" },
+  { status: "in_progress", label: "Đang làm" },
+  { status: "blocked", label: "Đang chờ" },
+  { status: "done", label: "Hoàn thành" },
 ];
 
 export default function TasksPage() {
@@ -54,7 +54,7 @@ export default function TasksPage() {
 
   async function submit() {
     if (title.trim().length < 2) {
-      setError("Vui lÃ²ng nháº­p tiÃªu Ä'á».");
+      setError("Vui lòng nhập tiêu đề.");
       return;
     }
     setError(null);
@@ -83,28 +83,33 @@ export default function TasksPage() {
 
   if (query.isLoading) return <Loading />;
   if (query.isError) {
-    return <ErrorState message="KhÃ´ng táº£i Ä'Æ°á»£c danh sÃ¡ch cÃ´ng viá»?c." onRetry={() => void query.refetch()} />;
+    return (
+      <ErrorState
+        message="Không tải được danh sách công việc."
+        onRetry={() => void query.refetch()}
+      />
+    );
   }
 
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">CÃ´ng viá»?c</h1>
+          <h1 className="text-xl font-semibold text-slate-800">Công việc</h1>
           <p className="text-sm text-slate-500">
-            Viá»?c cáº§n ngÆ°á»i xá»­ lÃ½: theo dÃµi khÃ¡ch, hoÃ n vÃ©, kiá»fm tra tÃ i liá»?uâ?¦
+            Việc cần người xử lý: theo dõi khách, hoàn vé, kiểm tra tài liệu…
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label className="flex cursor-pointer-pointer items-center gap-1.5 text-xs text-slate-600">
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
             <input
               type="checkbox"
               checked={overdueOnly}
               onChange={(e) => setOverdueOnly(e.target.checked)}
             />
-            Chá»? quÃ¡ háº¡n
+            Chỉ quá hạn
           </label>
-          <Button onClick={() => setCreating(true)}>Táº¡o cÃ´ng viá»?c</Button>
+          <Button onClick={() => setCreating(true)}>Tạo công việc</Button>
         </div>
       </header>
 
@@ -115,7 +120,7 @@ export default function TasksPage() {
             <Card key={col.status} title={`${col.label} (${items.length})`}>
               <div className="space-y-2">
                 {items.length === 0 && (
-                  <p className="py-6 text-center text-xs text-slate-400">Trá»'ng</p>
+                  <p className="py-6 text-center text-xs text-slate-400">Trống</p>
                 )}
                 {items.map((task) => (
                   <article
@@ -153,7 +158,7 @@ export default function TasksPage() {
                           className="rounded px-2 py-1 text-xs text-brand-600 hover:bg-brand-50"
                           onClick={() => move(task, "done")}
                         >
-                          HoÃ n thÃ nh
+                          Hoàn thành
                         </button>
                       )}
                       {col.status !== "in_progress" && col.status !== "done" && (
@@ -162,7 +167,7 @@ export default function TasksPage() {
                           className="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
                           onClick={() => move(task, "in_progress")}
                         >
-                          Báº¯t Ä'áº§u
+                          Bắt đầu
                         </button>
                       )}
                       {col.status !== "todo" && col.status !== "done" && (
@@ -171,7 +176,7 @@ export default function TasksPage() {
                           className="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
                           onClick={() => move(task, "todo")}
                         >
-                          Vá» cáº§n lÃ m
+                          Về cần làm
                         </button>
                       )}
                     </div>
@@ -185,67 +190,67 @@ export default function TasksPage() {
 
       {(query.data?.items ?? []).length === 0 && (
         <EmptyState
-          title="ChÆ°a cÃ³ cÃ´ng viá»?c nÃ o"
-          hint="Táº¡o cÃ´ng viá»?c Ä'á»f theo dÃµi cÃ¡c viá»?c cáº§n ngÆ°á»i xá»­ lÃ½."
+          title="Chưa có công việc nào"
+          hint="Tạo công việc để theo dõi các việc cần người xử lý."
         />
       )}
 
       <Modal
         open={creating}
         onClose={() => setCreating(false)}
-        title="Táº¡o cÃ´ng viá»?c"
+        title="Tạo công việc"
         footer={
           <>
             <Button variant="ghost" onClick={() => setCreating(false)}>
-              Huá»·
+              Huỷ
             </Button>
             <Button onClick={() => void submit()} disabled={create.isPending}>
-              {create.isPending ? "Äang lÆ°uâ?¦" : "Táº¡o"}
+              {create.isPending ? "Đang lưu…" : "Tạo"}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="TiÃªu Ä'á»">
+          <Field label="Tiêu đề">
             <input
               className="input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Gá»i láº¡i khÃ¡ch xÃ¡c nháº­n hoÃ n vÃ©"
+              placeholder="Gọi lại khách xác nhận hoàn vé"
             />
           </Field>
 
-          <Field label="MÃ´ táº£">
+          <Field label="Mô tả">
             <Textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Chi tiáº¿t cáº§n lÃ mâ?¦"
+              placeholder="Chi tiết cần làm…"
             />
           </Field>
 
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Æ¯u tiÃªn">
+            <Field label="Ưu tiên">
               <Select value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
                 <option value={1}>Cao</option>
-                <option value={2}>Trung bÃ¬nh</option>
-                <option value={3}>Tháº¥p</option>
+                <option value={2}>Trung bình</option>
+                <option value={3}>Thấp</option>
               </Select>
             </Field>
 
-            <Field label="Loáº¡i">
+            <Field label="Loại">
               <Select value={taskType} onChange={(e) => setTaskType(e.target.value)}>
-                <option value="customer_followup">Theo dÃµi khÃ¡ch</option>
-                <option value="booking_issue">Váº¥n Ä'á» Ä'áº·t chá»-</option>
-                <option value="refund">HoÃ n tiá»n</option>
-                <option value="document_review">Kiá»fm tra tÃ i liá»?u</option>
-                <option value="logistics">Váº­n hÃ nh</option>
-                <option value="report">BÃ¡o cÃ¡o</option>
-                <option value="other">KhÃ¡c</option>
+                <option value="customer_followup">Theo dõi khách</option>
+                <option value="booking_issue">Vấn đề đặt chỗ</option>
+                <option value="refund">Hoàn tiền</option>
+                <option value="document_review">Kiểm tra tài liệu</option>
+                <option value="logistics">Vận hành</option>
+                <option value="report">Báo cáo</option>
+                <option value="other">Khác</option>
               </Select>
             </Field>
 
-            <Field label="Háº¡n">
+            <Field label="Hạn">
               <input
                 className="input"
                 type="date"
