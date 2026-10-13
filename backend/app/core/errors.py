@@ -93,6 +93,27 @@ def _problem(
     )
 
 
+def _safe_errors(errors: list[dict]) -> list[dict]:
+    """Sanitize pydantic v2 error dicts so they are JSON-serializable.
+
+    Custom field validators raise ``ValueError`` whose message ends up inside
+    the error ``ctx``. ``JSONResponse`` cannot serialize exception objects, so a
+    weak-password rejection (or any validator failure) would otherwise crash the
+    handler and return a 500 instead of a clean 422.
+    """
+
+    def _clean(value):  # noqa: ANN001
+        if isinstance(value, Exception):
+            return str(value)
+        if isinstance(value, dict):
+            return {k: _clean(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [_clean(v) for v in value]
+        return value
+
+    return [_clean(err) for err in errors]
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Attach all exception handlers to the FastAPI app."""
 
@@ -115,7 +136,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=422,
             code="validation_error",
             message="Request payload failed validation.",
-            details={"errors": exc.errors()},
+            details={"errors": _safe_errors(exc.errors())},
         )
 
     @app.exception_handler(Exception)
