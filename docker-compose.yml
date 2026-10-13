@@ -1,0 +1,106 @@
+# ---------------------------------------------------------------------------
+# AirDesk — full local/production stack.
+#   docker compose up --build
+# Services: postgres, redis, api (FastAPI), web (React/nginx), worker (celery)
+# ---------------------------------------------------------------------------
+name: airdesk
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-airdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airdesk}
+      POSTGRES_DB: ${POSTGRES_DB:-airdesk}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airdesk} -d ${POSTGRES_DB:-airdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-airdesk}:${POSTGRES_PASSWORD:-airdesk}@postgres:5432/${POSTGRES_DB:-airdesk}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev-only-insecure-secret-change-me}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      FLIGHT_PROVIDERS: ${FLIGHT_PROVIDERS:-opensky,mock}
+      # Must match app/core/config.py field names (llm_model/llm_api_key/
+      # llm_api_base). Using LITELLM_* here would silently leave the container
+      # with no model credentials.
+      LLM_MODEL: ${LLM_MODEL:-anthropic/claude-sonnet-4-5}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_BASE: ${LLM_API_BASE:-}
+      LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      # Inbound email (optional; leave IMAP_HOST empty to disable)
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_USER: ${IMAP_USER:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      # Webhook signature enforcement. Keep true in production.
+      WEBHOOK_REQUIRE_SIGNATURE: ${WEBHOOK_REQUIRE_SIGNATURE:-true}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-airdesk}:${POSTGRES_PASSWORD:-airdesk}@postgres:5432/${POSTGRES_DB:-airdesk}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev-only-insecure-secret-change-me}
+      FLIGHT_PROVIDERS: ${FLIGHT_PROVIDERS:-opensky,mock}
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info"]
+
+volumes:
+  pgdata:
+  redisdata:

@@ -11,6 +11,30 @@ dist/
 __pycache__/
 .venv/
 venv/
+*.py[cod]
+*.egg-info/
+
+# Test / lint / type caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage.xml
+junit*.xml
+*.tsbuildinfo
+
+# Local databases (SQLite dev/test artefacts)
+*.db
+*.sqlite
+*.sqlite3
+
+# Scratch output from local verification runs
+_*.txt
+_*.xml
+# Throwaway helpers written next to the code while debugging. Without this a
+# `git add .` silently commits them: `_*.py` matches nothing above.
+_*.py
 
 # .NET
 bin/

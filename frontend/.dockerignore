@@ -1,0 +1,28 @@
+# Build artefacts and dependencies must never enter the build context:
+# node_modules is platform-specific and would shadow the Alpine-native install
+# inside the container.
+node_modules
+dist
+.vite
+
+# Editor / OS noise
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local config and logs (never bake secrets into an image)
+.env
+.env.*
+*.log
+npm-debug.log*
+
+# Test / tooling caches
+coverage
+.nyc_output
+*.tsbuildinfo
+
+# Docs and repo metadata not needed at runtime
+README.md
+eslint.config.js

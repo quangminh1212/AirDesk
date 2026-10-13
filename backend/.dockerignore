@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.git/
+.gitignore
+.env
+*.db
+*.sqlite
+node_modules/
+dist/
+build/
+*.egg-info/
+
+# NOTE: backend/README.md is intentionally NOT ignored — the Dockerfile copies
+# it alongside pyproject.toml, and pyproject.toml's packaging metadata needs it.
