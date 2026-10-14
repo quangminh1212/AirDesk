@@ -136,3 +136,14 @@ async def cache_priced_offer(
 async def get_shopped_offer_id(provider: str, priced_offer_id: str) -> str | None:
     """Return the shopped offer id a priced offer was derived from."""
     return await _get(f"offer-link:{provider}:{priced_offer_id}")
+
+
+async def offer_cache_backend() -> str:
+    """Return ``"redis"`` if the Redis-backed cache is active, else ``"memory"``.
+
+    Used by the periodic worker beat to surface a dead Redis in logs rather
+    than only when the next real search silently falls back to the in-process
+    cache.
+    """
+    redis = await _get_redis()
+    return "redis" if redis else "memory"

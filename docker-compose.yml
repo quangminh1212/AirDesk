@@ -61,11 +61,20 @@ services:
       LLM_API_BASE: ${LLM_API_BASE:-}
       LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
-      # Inbound email (optional; leave IMAP_HOST empty to disable)
+      # Inbound email (optional; leave IMAP_HOST empty to disable). The API
+      # exposes /inbox/poll, so it must carry the same IMAP/SMTP credentials
+      # the worker uses — otherwise manual polling can't classify or reply.
       IMAP_HOST: ${IMAP_HOST:-}
       IMAP_PORT: ${IMAP_PORT:-993}
       IMAP_USER: ${IMAP_USER:-}
       IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      IMAP_MAILBOX: ${IMAP_MAILBOX:-INBOX}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@airdesk.local}
+      EMAIL_AUTO_REPLY_ENABLED: ${EMAIL_AUTO_REPLY_ENABLED:-true}
       # Webhook signature enforcement. Keep true in production.
       WEBHOOK_REQUIRE_SIGNATURE: ${WEBHOOK_REQUIRE_SIGNATURE:-true}
     ports:
@@ -98,8 +107,29 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-airdesk}:${POSTGRES_PASSWORD:-airdesk}@postgres:5432/${POSTGRES_DB:-airdesk}
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-dev-only-insecure-secret-change-me}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       FLIGHT_PROVIDERS: ${FLIGHT_PROVIDERS:-opensky,mock}
-    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info"]
+      # The worker runs the beat (-B) so the email-poll + cache-warm schedule
+      # actually fires. It needs the same LLM/IMAP/SMTP credentials as the API
+      # because poll_mailboxes classifies mail and (optionally) replies.
+      LLM_MODEL: ${LLM_MODEL:-anthropic/claude-sonnet-4-5}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_BASE: ${LLM_API_BASE:-}
+      LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-}
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_USER: ${IMAP_USER:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      IMAP_MAILBOX: ${IMAP_MAILBOX:-INBOX}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@airdesk.local}
+      # Gate the scheduled poll: off by default, operator opts in.
+      EMAIL_POLL_ENABLED: ${EMAIL_POLL_ENABLED:-false}
+      EMAIL_AUTO_REPLY_ENABLED: ${EMAIL_AUTO_REPLY_ENABLED:-true}
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "-B", "--loglevel=info"]
 
 volumes:
   pgdata:
