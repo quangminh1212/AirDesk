@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -64,6 +64,17 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.2
     # Optional routing profile consumed by the LiteLLM proxy for budgets/limits.
     litellm_router_settings: dict | None = None
+
+    # --- LLM model default --------------------------------------------------
+    # An explicitly empty LLM_MODEL (e.g. someone writes "LLM_MODEL=" in .env)
+    # is normalised to the built-in default so operators only ever need to set
+    # LLM_API_KEY and LLM_API_BASE to turn AI on. LiteLLM requires a non-empty
+    # model string on every call, so this guard prevents a blank value from
+    # bubbling up as a runtime error.
+    @field_validator("llm_model")
+    @classmethod
+    def _coerce_llm_model(cls, v: str) -> str:
+        return v.strip() or "anthropic/claude-sonnet-4-5"
 
     # --- Flight providers --------------------------------------------------
     # CSV in env (FLIGHT_PROVIDERS=mock,amadeus). The mock provider always works offline.
