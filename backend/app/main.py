@@ -55,11 +55,14 @@ DESCRIPTION = """
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging()
+    resolved_model = settings.llm_model
+    if (resolved_model or "").strip().lower() == "auto":
+        resolved_model = "auto (discovered from gateway /v1/models)"
     logger.info(
         "startup",
         environment=settings.environment,
         version=__version__,
-        llm_model=settings.llm_model,
+        llm_model=resolved_model,
     )
     yield
     logger.info("shutdown")

@@ -138,6 +138,7 @@ class FlightAgent:
         final_content = ""
         total_prompt = total_completion = 0
         total_cost = 0.0
+        model_used = ""
         last_confidence: float | None = None
         started = time.perf_counter()
 
@@ -148,6 +149,7 @@ class FlightAgent:
                 tool_choice="auto",
                 metadata={"conversation_id": convo.id},
             )
+            model_used = result.model
             total_prompt += result.prompt_tokens
             total_completion += result.completion_tokens
             total_cost += result.cost_usd
@@ -289,7 +291,7 @@ class FlightAgent:
             conversation_id=convo.id,
             role=MessageRole.ASSISTANT,
             content=reply_text,
-            model=self._settings.llm_model,
+            model=model_used,
             prompt_tokens=total_prompt,
             completion_tokens=total_completion,
             cost_usd=total_cost,

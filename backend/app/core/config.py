@@ -66,15 +66,19 @@ class Settings(BaseSettings):
     litellm_router_settings: dict | None = None
 
     # --- LLM model default --------------------------------------------------
-    # An explicitly empty LLM_MODEL (e.g. someone writes "LLM_MODEL=" in .env)
-    # is normalised to the built-in default so operators only ever need to set
-    # LLM_API_KEY and LLM_API_BASE to turn AI on. LiteLLM requires a non-empty
-    # model string on every call, so this guard prevents a blank value from
-    # bubbling up as a runtime error.
+    # LLM_MODEL is OPTIONAL. Leave it blank (or set to "auto") and the gateway
+    # auto-discovers the model list from {LLM_API_BASE}/v1/models at call time:
+    # the first id is the primary model, the rest are an ordered fallback chain.
+    # Operators only ever need LLM_API_KEY + LLM_API_BASE to turn AI on; no
+    # model string is required. To pin a model (bypassing discovery), set
+    # LLM_MODEL to a literal "provider/model" string. LiteLLM requires a
+    # non-empty model on every call, so a blank value collapses to the "auto"
+    # sentinel which the gateway resolves via discovery (with a hard-coded
+    # last-resort fallback so the app still boots if the gateway is unreachable).
     @field_validator("llm_model")
     @classmethod
     def _coerce_llm_model(cls, v: str) -> str:
-        return v.strip() or "anthropic/claude-sonnet-4-5"
+        return v.strip() or "auto"
 
     # --- Flight providers --------------------------------------------------
     # CSV in env (FLIGHT_PROVIDERS=mock,amadeus). The mock provider always works offline.

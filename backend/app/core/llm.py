@@ -11,6 +11,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+import httpx
 import litellm
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -44,10 +45,85 @@ class LiteLLMGateway:
 
     def __init__(self) -> None:
         self._settings = get_settings()
+        # Discovered model list from the gateway's /v1/models, or None until
+        # the first call. None != empty: empty means "discovery ran, no models".
+        self._discovered_models: list[str] | None = None
+        self._http: httpx.AsyncClient | None = None
 
-    def _models(self, model: str | None = None) -> list[str]:
-        primary = model or self._settings.llm_model
-        return [primary, *self._settings.llm_fallback_models_list]
+    def _http_client(self) -> httpx.AsyncClient:
+        if self._http is None:
+            self._http = httpx.AsyncClient(
+                timeout=float(self._settings.llm_timeout_seconds)
+            )
+        return self._http
+
+    async def _discover_models(self) -> list[str]:
+        """Fetch the model list from the gateway's /v1/models endpoint.
+
+        Claude-Fable compatible: returns ``{"data": [{"id": "..."}, ...]}``.
+        The first id is the primary model; the rest form the fallback chain.
+        Discovery failures are non-fatal and fall back to the last-resort list.
+        """
+        if self._discovered_models is not None:
+            return self._discovered_models
+
+        settings = self._settings
+        base = (settings.llm_api_base or "").rstrip("/")
+        if not base:
+            self._discovered_models = []
+            return self._discovered_models
+
+        try:
+            headers = {"Accept": "application/json"}
+            if settings.llm_api_key:
+                headers["Authorization"] = f"Bearer {settings.llm_api_key}"
+            resp = await self._http_client().get(f"{base}/v1/models", headers=headers)
+            resp.raise_for_status()
+            payload = resp.json()
+            ids = [m.get("id") for m in payload.get("data", []) if m.get("id")]
+            self._discovered_models = ids
+            if ids:
+                logger.info("llm_models_discovered", count=len(ids), primary=ids[0])
+            else:
+                logger.warning("llm_models_empty", endpoint=f"{base}/v1/models")
+        except Exception as exc:  # noqa: BLE001 - discovery must never hard-fail
+            logger.warning("llm_models_discovery_failed", error=str(exc))
+            self._discovered_models = []
+
+        return self._discovered_models
+
+    async def _resolve_models(self, model: str | None = None) -> list[str]:
+        """Resolve the ordered candidate model list for a completion call.
+
+        Priority:
+        1. An explicit ``model`` argument (not ``auto``) — used verbatim.
+        2. Explicitly configured ``LLM_MODEL`` / ``LLM_FALLBACK_MODELS`` when the
+           operator chose to pin them (i.e. ``LLM_MODEL`` is not the ``auto``
+           sentinel).
+        3. Auto-discovery from ``/v1/models`` (first id = primary, rest = fallback).
+        4. A hard-coded last-resort list so the app still boots if discovery is
+           unreachable.
+        """
+        # 1. Explicit model passed at call site.
+        if model and model.strip().lower() != "auto":
+            return [model.strip()]
+
+        settings = self._settings
+        configured = (settings.llm_model or "").strip()
+
+        # 2. Operator pinned a model in settings (LLM_MODEL != auto).
+        if configured and configured.lower() != "auto":
+            return [configured, *settings.llm_fallback_models_list]
+
+        # 3. Auto-discovery from the gateway.
+        discovered = await self._discover_models()
+        if discovered:
+            return discovered
+
+        # 4. Last resort so boots/health stay green even without discovery.
+        last_resort = ["Claude-Fable/Claude-Fable"]
+        logger.warning("llm_using_last_resort_model", model=last_resort[0])
+        return last_resort
 
     async def complete(
         self,
@@ -62,7 +138,7 @@ class LiteLLMGateway:
         metadata: dict[str, Any] | None = None,
     ) -> LLMResult:
         """Run a chat completion with retries and model fallbacks."""
-        models = self._models(model)
+        models = await self._resolve_models(model)
         last_error: Exception | None = None
 
         for candidate in models:
