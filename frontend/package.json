@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview --port 4173",
+    "preview": "vite preview --host 127.0.0.1 --port 5173 --strictPort",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

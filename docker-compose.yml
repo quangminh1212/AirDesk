@@ -60,7 +60,7 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_API_BASE: ${LLM_API_BASE:-}
       LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       # Inbound email (optional; leave IMAP_HOST empty to disable). The API
       # exposes /inbox/poll, so it must carry the same IMAP/SMTP credentials
       # the worker uses — otherwise manual polling can't classify or reply.
@@ -91,7 +91,7 @@ services:
     depends_on:
       - api
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "${WEB_PORT:-5173}:80"
 
   worker:
     build:

@@ -10,6 +10,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,
     proxy: {
       // Dev-time proxy so the SPA can call the FastAPI backend directly.
       "/api": {

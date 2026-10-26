@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 12
     refresh_token_expire_days: int = 7
     # CSV in env (CORS_ORIGINS=a,b). Parsed via `cors_origins_list`.
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = "http://localhost:5173"
 
     # --- Database ----------------------------------------------------------
     database_url: str = Field(
